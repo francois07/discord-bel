@@ -11,3 +11,5 @@
 #.pnp.*
 
 dist
+.vscode
+node_modules

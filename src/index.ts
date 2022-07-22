@@ -1,4 +1,4 @@
-import {REST} from "@discordjs/rest";
+import { REST } from "@discordjs/rest";
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { Client, Routes, GatewayIntentBits, ChatInputCommandInteraction } from "discord.js";
 import fs from "fs"
