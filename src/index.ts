@@ -3,6 +3,7 @@ import { SlashCommandBuilder } from "@discordjs/builders";
 import { Client, Routes, GatewayIntentBits, ChatInputCommandInteraction } from "discord.js";
 import fs from "fs"
 import path from "path";
+import { ClientEvents, Awaitable } from "discord.js/typings";
 
 interface IBelCommand {
   name: string
@@ -10,9 +11,9 @@ interface IBelCommand {
   run: (interaction: ChatInputCommandInteraction) => any
 }
 
-interface IBelListener {
-  name: string
-  run: (...args: any[]) => any
+interface IBelListener<T extends keyof ClientEvents> {
+  name: keyof ClientEvents
+  run: (...args: ClientEvents[T]) => Awaitable<void>
 }
 
 interface IBelConfig {
@@ -25,7 +26,7 @@ interface IBelConfig {
 interface IBelClient {
   client: Client
   commands: Map<string, IBelCommand>
-  listeners:  Map<string, IBelListener>
+  listeners:  Map<string, IBelListener<any>>
 }
 
 const loadCommands = (token: string, client_id: string, cmd_path: string) => {
@@ -65,12 +66,12 @@ const loadCommands = (token: string, client_id: string, cmd_path: string) => {
 }
 
 const loadListeners = (listener_path: string, client: Client) => {
-  const listenerMap = new Map<string, IBelListener>
+  const listenerMap = new Map<string, IBelListener<any>>
   const listenerFiles = fs.readdirSync(listener_path).filter(file => file.endsWith(".js"))
 
   for (const file of listenerFiles){
     const importedFile = require(path.join(listener_path, file))
-    const listener: IBelListener = importedFile.default
+    const listener: IBelListener<any> = importedFile.default
 
     if(!listener) throw new Error("File does not export default")
 
@@ -90,7 +91,7 @@ export const createBelClient = (token: string, config: IBelConfig): IBelClient =
   })
   
   const commandMap = config.commandsPath ? loadCommands(token, config.clientId, config.commandsPath) : new Map<string, IBelCommand>()
-  const listenerMap = config.listenersPath ? loadListeners(config.listenersPath, client) : new Map<string, IBelListener>()
+  const listenerMap = config.listenersPath ? loadListeners(config.listenersPath, client) : new Map<string, IBelListener<any>>()
 
   return {
     client,
