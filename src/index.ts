@@ -12,7 +12,7 @@ export interface IBelCommand {
 }
 
 export interface IBelListener<T extends keyof ClientEvents> {
-  name: keyof ClientEvents
+  name: T
   run: (...args: ClientEvents[T]) => Awaitable<void>
 }
 
