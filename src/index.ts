@@ -5,25 +5,25 @@ import fs from "fs"
 import path from "path";
 import { ClientEvents, Awaitable } from "discord.js/typings";
 
-interface IBelCommand {
+export interface IBelCommand {
   name: string
   builder: SlashCommandBuilder
   run: (interaction: ChatInputCommandInteraction) => any
 }
 
-interface IBelListener<T extends keyof ClientEvents> {
+export interface IBelListener<T extends keyof ClientEvents> {
   name: keyof ClientEvents
   run: (...args: ClientEvents[T]) => Awaitable<void>
 }
 
-interface IBelConfig {
+export interface IBelConfig {
   commandsPath?: string;
   listenersPath?: string;
   intents?: GatewayIntentBits[]
   clientId: string
 }
 
-interface IBelClient {
+export interface IBelClient {
   client: Client
   commands: Map<string, IBelCommand>
   listeners:  Map<string, IBelListener<any>>
