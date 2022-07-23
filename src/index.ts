@@ -10,8 +10,14 @@ interface IBelCommand {
   run: (interaction: ChatInputCommandInteraction) => any
 }
 
+interface IBelListener {
+  name: string
+  run: (...args: any[]) => any
+}
+
 interface IBelConfig {
-  commandsPath: string;
+  commandsPath?: string;
+  listenersPath?: string;
   intents?: GatewayIntentBits[]
   clientId: string
 }
@@ -19,17 +25,15 @@ interface IBelConfig {
 interface IBelClient {
   client: Client
   commands: Map<string, IBelCommand>
+  listeners:  Map<string, IBelListener>
 }
 
-export const createBelClient = (token: string, config: IBelConfig): IBelClient => {
-  const client = new Client({
-    intents: [...(config.intents ?? []), GatewayIntentBits.Guilds]
-  })
+const loadCommands = (token: string, client_id: string, cmd_path: string) => {
   const commandMap = new Map<string, IBelCommand>
-  const commandFiles = fs.readdirSync(config.commandsPath).filter(file => file.endsWith(".js"))
+  const commandFiles = fs.readdirSync(cmd_path).filter(file => file.endsWith(".js"))
 
   for (const file of commandFiles){
-    const importedFile = require(path.join(config.commandsPath, file))
+    const importedFile = require(path.join(cmd_path, file))
     const command: IBelCommand = importedFile.default
 
     if(!command) throw new Error("File does not export default")
@@ -45,7 +49,7 @@ export const createBelClient = (token: string, config: IBelConfig): IBelClient =
       console.log("Refreshing application (/) commands...")
 
       await rest.put(
-        Routes.applicationCommands(config.clientId),
+        Routes.applicationCommands(client_id),
         {
           body: commandBuilders
         }
@@ -57,8 +61,40 @@ export const createBelClient = (token: string, config: IBelConfig): IBelClient =
     }
   })()
 
+  return commandMap
+}
+
+const loadListeners = (listener_path: string, client: Client) => {
+  const listenerMap = new Map<string, IBelListener>
+  const listenerFiles = fs.readdirSync(listener_path).filter(file => file.endsWith(".js"))
+
+  for (const file of listenerFiles){
+    const importedFile = require(path.join(listener_path, file))
+    const listener: IBelListener = importedFile.default
+
+    if(!listener) throw new Error("File does not export default")
+
+    listenerMap.set(listener.name, listener)
+  }
+
+  listenerMap.forEach(listener => {
+    client.on(listener.name, (...args) => listener.run(...args))
+  })
+
+  return listenerMap
+}
+
+export const createBelClient = (token: string, config: IBelConfig): IBelClient => {
+  const client = new Client({
+    intents: [...(config.intents ?? []), GatewayIntentBits.Guilds]
+  })
+  
+  const commandMap = config.commandsPath ? loadCommands(token, config.clientId, config.commandsPath) : new Map<string, IBelCommand>()
+  const listenerMap = config.listenersPath ? loadListeners(config.listenersPath, client) : new Map<string, IBelListener>()
+
   return {
     client,
-    commands: commandMap
+    commands: commandMap,
+    listeners: listenerMap
   }
 };

@@ -17,15 +17,11 @@ const rest_1 = require("@discordjs/rest");
 const discord_js_1 = require("discord.js");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
-const createBelClient = (token, config) => {
-    var _a;
-    const client = new discord_js_1.Client({
-        intents: [...((_a = config.intents) !== null && _a !== void 0 ? _a : []), discord_js_1.GatewayIntentBits.Guilds]
-    });
+const loadCommands = (token, client_id, cmd_path) => {
     const commandMap = new Map;
-    const commandFiles = fs_1.default.readdirSync(config.commandsPath).filter(file => file.endsWith(".js"));
+    const commandFiles = fs_1.default.readdirSync(cmd_path).filter(file => file.endsWith(".js"));
     for (const file of commandFiles) {
-        const importedFile = require(path_1.default.join(config.commandsPath, file));
+        const importedFile = require(path_1.default.join(cmd_path, file));
         const command = importedFile.default;
         if (!command)
             throw new Error("File does not export default");
@@ -36,7 +32,7 @@ const createBelClient = (token, config) => {
     (() => __awaiter(void 0, void 0, void 0, function* () {
         try {
             console.log("Refreshing application (/) commands...");
-            yield rest.put(discord_js_1.Routes.applicationCommands(config.clientId), {
+            yield rest.put(discord_js_1.Routes.applicationCommands(client_id), {
                 body: commandBuilders
             });
             console.log(`Refreshed ${commandMap.size} application (/) commands successfully`);
@@ -45,9 +41,34 @@ const createBelClient = (token, config) => {
             console.error(err);
         }
     }))();
+    return commandMap;
+};
+const loadListeners = (listener_path, client) => {
+    const listenerMap = new Map;
+    const listenerFiles = fs_1.default.readdirSync(listener_path).filter(file => file.endsWith(".js"));
+    for (const file of listenerFiles) {
+        const importedFile = require(path_1.default.join(listener_path, file));
+        const listener = importedFile.default;
+        if (!listener)
+            throw new Error("File does not export default");
+        listenerMap.set(listener.name, listener);
+    }
+    listenerMap.forEach(listener => {
+        client.on(listener.name, (...args) => listener.run(...args));
+    });
+    return listenerMap;
+};
+const createBelClient = (token, config) => {
+    var _a;
+    const client = new discord_js_1.Client({
+        intents: [...((_a = config.intents) !== null && _a !== void 0 ? _a : []), discord_js_1.GatewayIntentBits.Guilds]
+    });
+    const commandMap = config.commandsPath ? loadCommands(token, config.clientId, config.commandsPath) : new Map();
+    const listenerMap = config.listenersPath ? loadListeners(config.listenersPath, client) : new Map();
     return {
         client,
-        commands: commandMap
+        commands: commandMap,
+        listeners: listenerMap
     };
 };
 exports.createBelClient = createBelClient;
