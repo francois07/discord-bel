@@ -1,24 +1,28 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { Client, GatewayIntentBits, ChatInputCommandInteraction } from "discord.js";
+import { GatewayIntentBits, ChatInputCommandInteraction } from "discord.js";
 import { ClientEvents, Awaitable } from "discord.js/typings";
-export interface IBelCommand {
+export interface BelCommand {
     name: string;
     builder: SlashCommandBuilder;
     run: (interaction: ChatInputCommandInteraction) => any;
 }
-export interface IBelListener<T extends keyof ClientEvents> {
-    name: keyof ClientEvents;
-    run: (...args: ClientEvents[T]) => Awaitable<void>;
+export interface BelListener {
+    name: string;
+    run: (...args: any) => any;
 }
-export interface IBelConfig {
+export interface BelConfig {
     commandsPath?: string;
     listenersPath?: string;
     intents?: GatewayIntentBits[];
     clientId: string;
 }
-export interface IBelClient {
-    client: Client;
-    commands: Map<string, IBelCommand>;
-    listeners: Map<string, IBelListener<any>>;
+export interface BelClient {
+    commands: Map<string, BelCommand>;
+    listeners: Map<string, BelListener>;
 }
-export declare const createBelClient: (token: string, config: IBelConfig) => IBelClient;
+export declare const createBelClient: (token: string, config: BelConfig) => BelClient;
+export declare const createBelListener: <K extends keyof ClientEvents>(name: K, run: (...args: ClientEvents[K]) => Awaitable<void>) => BelListener;
+export declare const createBelCommand: (name: string, run: (interaction: ChatInputCommandInteraction) => any) => {
+    name: string;
+    run: (interaction: ChatInputCommandInteraction) => any;
+};

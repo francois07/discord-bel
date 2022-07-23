@@ -12,12 +12,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createBelClient = void 0;
+exports.createBelCommand = exports.createBelListener = exports.createBelClient = void 0;
 const rest_1 = require("@discordjs/rest");
 const discord_js_1 = require("discord.js");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
-const loadCommands = (token, client_id, cmd_path) => {
+const loadCommands = (token, client_id, cmd_path, client) => {
     const commandMap = new Map;
     const commandFiles = fs_1.default.readdirSync(cmd_path).filter(file => file.endsWith(".js"));
     for (const file of commandFiles) {
@@ -41,6 +41,15 @@ const loadCommands = (token, client_id, cmd_path) => {
             console.error(err);
         }
     }))();
+    client.on("interactionCreate", (interaction) => {
+        if (!interaction.isChatInputCommand())
+            return;
+        const { commandName } = interaction;
+        const cmd = commandMap.get(commandName);
+        if (cmd) {
+            cmd.run(interaction);
+        }
+    });
     return commandMap;
 };
 const loadListeners = (listener_path, client) => {
@@ -63,12 +72,22 @@ const createBelClient = (token, config) => {
     const client = new discord_js_1.Client({
         intents: [...((_a = config.intents) !== null && _a !== void 0 ? _a : []), discord_js_1.GatewayIntentBits.Guilds]
     });
-    const commandMap = config.commandsPath ? loadCommands(token, config.clientId, config.commandsPath) : new Map();
+    const commandMap = config.commandsPath ? loadCommands(token, config.clientId, config.commandsPath, client) : new Map();
     const listenerMap = config.listenersPath ? loadListeners(config.listenersPath, client) : new Map();
-    return {
-        client,
-        commands: commandMap,
-        listeners: listenerMap
-    };
+    return Object.assign(Object.assign({}, client), { commands: commandMap, listeners: listenerMap });
 };
 exports.createBelClient = createBelClient;
+const createBelListener = (name, run) => {
+    return {
+        name,
+        run
+    };
+};
+exports.createBelListener = createBelListener;
+const createBelCommand = (name, run) => {
+    return {
+        name,
+        run
+    };
+};
+exports.createBelCommand = createBelCommand;
