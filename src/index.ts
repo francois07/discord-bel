@@ -1,19 +1,22 @@
 import { REST } from "@discordjs/rest";
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { Client, Routes, GatewayIntentBits, ChatInputCommandInteraction } from "discord.js";
+import { Client, Routes, GatewayIntentBits, ChatInputCommandInteraction, ClientEvents } from "discord.js";
 import fs from "fs"
 import path from "path";
-import { ClientEvents, Awaitable } from "discord.js/typings";
 
-export interface BelCommand {
-  name: string
-  builder: SlashCommandBuilder
-  run: (interaction: ChatInputCommandInteraction) => any
+export type BelCommandRunMethod = (interaction: ChatInputCommandInteraction) => any
+
+export interface BelListener<T extends keyof ClientEvents> {
+  name: T
+  once?: boolean,
+  run(...args: ClientEvents[T]): any
 }
 
-export interface BelListener {
-  name: string
-  run: (...args: any) => any
+const createListener = <T extends keyof ClientEvents>(listener: BelListener<T>) => listener
+
+export interface BelCommand {
+  builder: SlashCommandBuilder
+  run: BelCommandRunMethod
 }
 
 export interface BelConfig {
@@ -24,24 +27,25 @@ export interface BelConfig {
 }
 
 export interface BelClient {
-  commands: Map<string, BelCommand>
-  listeners: Map<string, BelListener>
+  commands: Map<string, BelCommandRunMethod>
+  listeners: Map<string, BelListener<keyof ClientEvents>["run"]>
 }
 
 const loadCommands = (token: string, client_id: string, cmd_path: string, client: Client) => {
-  const commandMap = new Map<string, BelCommand>
+  const commandMap = new Map<string, BelCommandRunMethod>
   const commandFiles = fs.readdirSync(cmd_path).filter(file => file.endsWith(".js"))
+  const commandBuilders = [];
 
   for (const file of commandFiles) {
     const importedFile = require(path.join(cmd_path, file))
-    const command: BelCommand = importedFile.default
+    const { builder, run }: BelCommand = importedFile
 
-    if (!command) throw new Error("File does not export default")
+    if (!builder || !run) throw new Error("Command files need to export builder object & run method")
 
-    commandMap.set(command.name, command)
+    commandBuilders.push(builder)
+    commandMap.set(builder.name, run)
   }
 
-  const commandBuilders = Array.from(commandMap.values()).map((cmd) => cmd.builder.toJSON())
   const rest = new REST({ version: '9' }).setToken(token);
 
   (async () => {
@@ -64,10 +68,10 @@ const loadCommands = (token: string, client_id: string, cmd_path: string, client
 
     const { commandName } = interaction
 
-    const cmd = commandMap.get(commandName)
+    const runCommand = commandMap.get(commandName)
 
-    if (cmd) {
-      cmd.run(interaction)
+    if (runCommand) {
+      runCommand(interaction)
     }
   })
 
@@ -75,21 +79,22 @@ const loadCommands = (token: string, client_id: string, cmd_path: string, client
 }
 
 const loadListeners = (listener_path: string, client: Client) => {
-  const listenerMap = new Map<string, BelListener>
+  const listenerMap = new Map<string, BelListener<keyof ClientEvents>["run"]>
   const listenerFiles = fs.readdirSync(listener_path).filter(file => file.endsWith(".js"))
 
   for (const file of listenerFiles) {
-    const importedFile = require(path.join(listener_path, file))
-    const listener: BelListener = importedFile.default
+    const { name, once, run }: BelListener<keyof ClientEvents> = require(path.join(listener_path, file))
 
-    if (!listener) throw new Error("File does not export default")
+    const event = name ?? file.slice(0, -3)
 
-    listenerMap.set(listener.name, listener)
+    if (once) {
+      client.once(event, run)
+    } else {
+      client.on(event, run)
+    }
+
+    listenerMap.set(event, run)
   }
-
-  listenerMap.forEach(listener => {
-    client.on(listener.name, (...args) => listener.run(...args))
-  })
 
   return listenerMap
 }
@@ -99,22 +104,8 @@ export const createBelClient = (token: string, config: BelConfig): BelClient => 
     intents: [...(config.intents ?? []), GatewayIntentBits.Guilds]
   })
 
-  const commandMap = config.commandsPath ? loadCommands(token, config.clientId, config.commandsPath, client) : new Map<string, BelCommand>()
-  const listenerMap = config.listenersPath ? loadListeners(config.listenersPath, client) : new Map<string, BelListener>()
+  const commandMap = config.commandsPath ? loadCommands(token, config.clientId, config.commandsPath, client) : new Map<string, BelCommandRunMethod>()
+  const listenerMap = config.listenersPath ? loadListeners(config.listenersPath, client) : new Map<string, BelListener<keyof ClientEvents>["run"]>()
 
   return { ...client, commands: commandMap, listeners: listenerMap }
 };
-
-export const createBelListener = <K extends keyof ClientEvents>(name: K, run: (...args: ClientEvents[K]) => Awaitable<void>): BelListener => {
-  return {
-    name,
-    run
-  }
-}
-
-export const createBelCommand = (name: string, run: (interaction: ChatInputCommandInteraction) => any) => {
-  return {
-    name,
-    run
-  }
-}
