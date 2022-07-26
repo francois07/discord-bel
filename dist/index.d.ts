@@ -1,28 +1,31 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { GatewayIntentBits, ChatInputCommandInteraction } from "discord.js";
-import { ClientEvents, Awaitable } from "discord.js/typings";
-export interface BelCommand {
-    name: string;
-    builder: SlashCommandBuilder;
-    run: (interaction: ChatInputCommandInteraction) => any;
+import { Client, ChatInputCommandInteraction, ClientEvents, ClientOptions } from "discord.js";
+export declare type BelCommandRunMethod = (interaction: ChatInputCommandInteraction) => any;
+export interface BelListener<T extends keyof ClientEvents> {
+    name: T;
+    once?: boolean;
+    run(...args: ClientEvents[T]): any;
 }
-export interface BelListener {
-    name: string;
-    run: (...args: any) => any;
+export declare const createBelListener: <T extends keyof ClientEvents>(listener: BelListener<T>) => BelListener<T>;
+export interface BelCommand {
+    builder: SlashCommandBuilder;
+    run: BelCommandRunMethod;
 }
 export interface BelConfig {
     commandsPath?: string;
     listenersPath?: string;
-    intents?: GatewayIntentBits[];
     clientId: string;
+    token: string;
 }
-export interface BelClient {
-    commands: Map<string, BelCommand>;
-    listeners: Map<string, BelListener>;
+export declare class BelClient extends Client {
+    commandMap: Map<string, BelCommandRunMethod>;
+    listenerMap: Map<string, (...args: [data: import("discord.js").ApplicationCommandPermissionsUpdateData] | [message: string] | [channel: import("discord.js").NonThreadGuildBasedChannel] | [channel: import("discord.js").DMChannel | import("discord.js").NonThreadGuildBasedChannel] | [channel: import("discord.js").TextBasedChannel, date: Date] | [oldChannel: import("discord.js").DMChannel | import("discord.js").NonThreadGuildBasedChannel, newChannel: import("discord.js").DMChannel | import("discord.js").NonThreadGuildBasedChannel] | [message: string] | [message: string] | [emoji: import("discord.js").GuildEmoji] | [emoji: import("discord.js").GuildEmoji] | [oldEmoji: import("discord.js").GuildEmoji, newEmoji: import("discord.js").GuildEmoji] | [error: Error] | [ban: import("discord.js").GuildBan] | [ban: import("discord.js").GuildBan] | [guild: import("discord.js").Guild] | [guild: import("discord.js").Guild] | [guild: import("discord.js").Guild] | [guild: import("discord.js").Guild] | [member: import("discord.js").GuildMember] | [member: import("discord.js").GuildMember | import("discord.js").PartialGuildMember] | [member: import("discord.js").GuildMember | import("discord.js").PartialGuildMember] | [members: import("@discordjs/collection").Collection<string, import("discord.js").GuildMember>, guild: import("discord.js").Guild, data: {
+        count: number;
+        index: number;
+        nonce: string | undefined;
+    }] | [oldMember: import("discord.js").GuildMember | import("discord.js").PartialGuildMember, newMember: import("discord.js").GuildMember] | [oldGuild: import("discord.js").Guild, newGuild: import("discord.js").Guild] | [invite: import("discord.js").Invite] | [invite: import("discord.js").Invite] | [message: import("discord.js").Message<boolean>] | [message: import("discord.js").Message<boolean> | import("discord.js").PartialMessage] | [message: import("discord.js").Message<boolean> | import("discord.js").PartialMessage, reactions: import("@discordjs/collection").Collection<string, import("discord.js").MessageReaction>] | [reaction: import("discord.js").MessageReaction | import("discord.js").PartialMessageReaction] | [messages: import("@discordjs/collection").Collection<string, import("discord.js").Message<boolean> | import("discord.js").PartialMessage>, channel: import("discord.js").TextBasedChannel] | [reaction: import("discord.js").MessageReaction | import("discord.js").PartialMessageReaction, user: import("discord.js").User | import("discord.js").PartialUser] | [reaction: import("discord.js").MessageReaction | import("discord.js").PartialMessageReaction, user: import("discord.js").User | import("discord.js").PartialUser] | [oldMessage: import("discord.js").Message<boolean> | import("discord.js").PartialMessage, newMessage: import("discord.js").Message<boolean> | import("discord.js").PartialMessage] | [oldPresence: import("discord.js").Presence | null, newPresence: import("discord.js").Presence] | [client: Client<true>] | [] | [role: import("discord.js").Role] | [role: import("discord.js").Role] | [oldRole: import("discord.js").Role, newRole: import("discord.js").Role] | [thread: import("discord.js").AnyThreadChannel, newlyCreated: boolean] | [thread: import("discord.js").AnyThreadChannel] | [threads: import("@discordjs/collection").Collection<string, import("discord.js").AnyThreadChannel>, guild: import("discord.js").Guild] | [oldMember: import("discord.js").ThreadMember, newMember: import("discord.js").ThreadMember] | [addedMembers: import("@discordjs/collection").Collection<string, import("discord.js").ThreadMember>, removedMembers: import("@discordjs/collection").Collection<string, import("discord.js").ThreadMember | import("discord.js").PartialThreadMember>, thread: import("discord.js").AnyThreadChannel] | [oldThread: import("discord.js").AnyThreadChannel, newThread: import("discord.js").AnyThreadChannel] | [typing: import("discord.js").Typing] | [oldUser: import("discord.js").User | import("discord.js").PartialUser, newUser: import("discord.js").User] | [oldState: import("discord.js").VoiceState, newState: import("discord.js").VoiceState] | [channel: import("discord.js").NewsChannel | import("discord.js").TextChannel | import("discord.js").VoiceChannel] | [interaction: import("discord.js").Interaction<import("discord.js").CacheType>] | [closeEvent: import("discord.js").CloseEvent, shardId: number] | [error: Error, shardId: number] | [shardId: number, unavailableGuilds: Set<string> | undefined] | [shardId: number] | [shardId: number, replayedEvents: number] | [stageInstance: import("discord.js").StageInstance] | [oldStageInstance: import("discord.js").StageInstance | null, newStageInstance: import("discord.js").StageInstance] | [stageInstance: import("discord.js").StageInstance] | [sticker: import("discord.js").Sticker] | [sticker: import("discord.js").Sticker] | [oldSticker: import("discord.js").Sticker, newSticker: import("discord.js").Sticker] | [guildScheduledEvent: import("discord.js").GuildScheduledEvent<import("discord.js").GuildScheduledEventStatus>] | [oldGuildScheduledEvent: import("discord.js").GuildScheduledEvent<import("discord.js").GuildScheduledEventStatus> | null, newGuildScheduledEvent: import("discord.js").GuildScheduledEvent<import("discord.js").GuildScheduledEventStatus>] | [guildScheduledEvent: import("discord.js").GuildScheduledEvent<import("discord.js").GuildScheduledEventStatus>] | [guildScheduledEvent: import("discord.js").GuildScheduledEvent<import("discord.js").GuildScheduledEventStatus>, user: import("discord.js").User] | [guildScheduledEvent: import("discord.js").GuildScheduledEvent<import("discord.js").GuildScheduledEventStatus>, user: import("discord.js").User]) => any>;
+    constructor(options: ClientOptions & BelConfig);
+    init(token: string, options: BelConfig): void;
+    loadCommands(token: string, client_id: string, cmd_path: string, client: Client): void;
+    loadListeners(listener_path: string, client: Client): void;
 }
-export declare const createBelClient: (token: string, config: BelConfig) => BelClient;
-export declare const createBelListener: <K extends keyof ClientEvents>(name: K, run: (...args: ClientEvents[K]) => Awaitable<void>) => BelListener;
-export declare const createBelCommand: (name: string, run: (interaction: ChatInputCommandInteraction) => any) => {
-    name: string;
-    run: (interaction: ChatInputCommandInteraction) => any;
-};
